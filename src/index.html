@@ -35,6 +35,20 @@
         // reset
         qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
 
+        // version
+        const inB = new TextEncoder().encode(t);
+        const bL = inB.length;
+        
+        const ver = bL < 18 ? 1 : bL < 33 ? 2 : bL < 54 ? 3 : bL < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
+        console.log(ver)
+
+        if (ver === 0) { qrctx.textAlign = "center"; qrctx.fillText("78 bytes max", qrctx.canvas.width/2, qrctx.canvas.height/2); }
+
+        // codewords
+        const dcw = [0, 19, 34, 55, 80][ver];
+        const eccw = [0, 7, 10, 15, 20][ver];
+
+        const size = 17 + 4*ver;
 
     }
 </script>
