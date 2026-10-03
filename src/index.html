@@ -7,7 +7,32 @@
     /** @type {CanvasRenderingContext2D} */
     const qrctx = document.getElementById("qr").getContext("2d");
     function updateqr(t) {
+        
+        // reset
         qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
-        qrctx.fillText(t, 0, 50)
+        
+        // galois field
+
+        let eT = new Array(512);
+        let lT = new Array(256);
+
+        let v = 1;
+
+        for (let i = 0; i < 255; i++) {
+            eT[i] = v;
+            lT[v] = i;
+
+            v <<= 1;
+            if(v & 256) v ^= 0x11D;
+        }
+
+        for (i = 255; i < 512; i++) eT[i] = eT[i - 255];
+    
+        function gM(a, b) { // galois multiply
+            if (a === 0 || b === 0) return 0;
+            return eT[lT[a] + lt[b]];
+        }
+    
+    
     }
 </script>
