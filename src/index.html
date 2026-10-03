@@ -4,13 +4,7 @@
 <canvas id="qr" style="background-color: white; width: 200px; height: 200px;"></canvas>
 </body>
 <script>
-    /** @type {CanvasRenderingContext2D} */
-    const qrctx = document.getElementById("qr").getContext("2d");
-    function updateqr(t) {
-        
-        // reset
-        qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
-        
+
         // galois field
 
         let eT = new Array(512);
@@ -32,7 +26,14 @@
             if (a === 0 || b === 0) return 0;
             return eT[lT[a] + lt[b]];
         }
-    
+
+    /** @type {CanvasRenderingContext2D} */
+    const qrctx = document.getElementById("qr").getContext("2d");
+    function updateqr(t) {
+        
+        // reset
+        qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
+            
     
     }
 </script>
