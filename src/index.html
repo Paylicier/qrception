@@ -8,45 +8,45 @@
 
     // galois field
 
-    let eT = new Array(512);
-    let lT = new Array(256);
+    let expTable = new Array(512);
+    let logTable = new Array(256);
 
-    let v = 1;
+    let value = 1;
 
     for (let i = 0; i < 255; i++) {
-        eT[i] = v;
-        lT[v] = i;
+        expTable[i] = value;
+        logTable[value] = i;
 
-        v <<= 1;
-        if (v & 256) v ^= 0x11D;
+        value <<= 1;
+        if (value & 256) value ^= 0x11D;
     }
 
-    for (i = 255; i < 512; i++) eT[i] = eT[i - 255];
+    for (i = 255; i < 512; i++) expTable[i] = expTable[i - 255];
 
     function gM(a, b) { // galois multiply
         if (a === 0 || b === 0) return 0;
-        return eT[lT[a] + lT[b]];
+        return expTable[logTable[a] + logTable[b]];
     }
 
     /** @type {CanvasRenderingContext2D} */
     const qrctx = document.getElementById("qr").getContext("2d");
-    function updateqr(t) {
+    function updateqr(text) {
 
         // reset
         qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
 
         // version
-        const inB = new TextEncoder().encode(t);
-        const bL = inB.length;
+        const inputBytes = new TextEncoder().encode(text);
+        const byteLength = inputBytes.length;
         
-        const ver = bL < 18 ? 1 : bL < 33 ? 2 : bL < 54 ? 3 : bL < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
+        const ver = byteLength < 18 ? 1 : byteLength < 33 ? 2 : byteLength < 54 ? 3 : byteLength < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
         console.log(ver)
 
         if (ver === 0) { qrctx.textAlign = "center"; qrctx.fillText("78 bytes max", qrctx.canvas.width/2, qrctx.canvas.height/2); }
 
         // codewords
-        const dcw = [0, 19, 34, 55, 80][ver];
-        const eccw = [0, 7, 10, 15, 20][ver];
+        const data_cw = [0, 19, 34, 55, 80][ver];
+        const ec_cw = [0, 7, 10, 15, 20][ver];
 
         const size = 17 + 4*ver;
 
