@@ -1,4 +1,4 @@
-<title>qr code thing</title>
+<title>qr code thingy</title>
 
 <body style="background-color: black;">
     <input id="txt" oninput=updateqr(this.value)><br>
@@ -39,17 +39,17 @@
         // version
         const inputBytes = new TextEncoder().encode(text);
         const byteLength = inputBytes.length;
-        
+
         const ver = byteLength < 18 ? 1 : byteLength < 33 ? 2 : byteLength < 54 ? 3 : byteLength < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
         console.log(ver)
 
-        if (ver === 0) { qrctx.textAlign = "center"; qrctx.fillText("78 bytes max", qrctx.canvas.width/2, qrctx.canvas.height/2); }
+        if (ver === 0) { qrctx.textAlign = "center"; return qrctx.fillText("78 bytes max", qrctx.canvas.width / 2, qrctx.canvas.height / 2); }
 
         // codewords
         const data_cw = [0, 19, 34, 55, 80][ver];
         const ec_cw = [0, 7, 10, 15, 20][ver];
 
-        const size = 17 + 4*ver;
+        const size = 17 + 4 * ver;
 
         let bitBuffer = [];
 
@@ -62,7 +62,7 @@
 
         for (i = 0; i < byteLength; i++) pushBits(inputBytes[i], 8) // data
 
-        pushBits(0, Math.min(4, data_cw*8 - bitBuffer.length)) // https://www.thonky.com/qr-code-tutorial/data-encoding#add-a-terminator-of-0s-if-necessary
+        pushBits(0, Math.min(4, data_cw * 8 - bitBuffer.length)) // https://www.thonky.com/qr-code-tutorial/data-encoding#add-a-terminator-of-0s-if-necessary
 
         while (bitBuffer.length % 8 !== 0) bitBuffer.push(0); // https://www.thonky.com/qr-code-tutorial/data-encoding#add-more-0s-to-make-the-length-a-multiple-of-8
 
@@ -72,12 +72,12 @@
 
         for (i = 0; i < bitBuffer.length; i += 8) {
             let byteValue = 0;
-            for (let j = 0; j < 8; j++) byteValue = byteValue*2 + bitBuffer[i+j];
+            for (let j = 0; j < 8; j++) byteValue = byteValue * 2 + bitBuffer[i + j];
             dataCodewords.push(byteValue)
         }
 
-        for (i=0; dataCodewords.length < data_cw; i++) {
-            dataCodewords.push(i%2 === 0 ? 0xEC : 0x11); 
+        for (i = 0; dataCodewords.length < data_cw; i++) {
+            dataCodewords.push(i % 2 === 0 ? 0xEC : 0x11);
         }
 
         // reed-solomon
@@ -87,7 +87,7 @@
 
         for (i = 0; i < ec_cw; i++) {
             let nextPoly = new Array(generatorPoly.length + 1).fill(0);
-            for (j=0; j<generatorPoly.length; j++) {
+            for (j = 0; j < generatorPoly.length; j++) {
                 nextPoly[j] ^= galoisMultiply(generatorPoly[j], expTable[i]);
                 nextPoly[j + 1] ^= generatorPoly[j];
             }
@@ -104,6 +104,62 @@
         }
 
         const codewords = dataCodewords.concat(ecCodewords);
+
+        console.log("cw", codewords)
+
+
+        // static marker things or whatever they're called
+        // https://www.thonky.com/qr-code-tutorial/module-placement-matrix
+
+        const matrix = [];
+
+        for (let row = 0; row < size; row++) {
+            matrix.push([])
+            for (let col = 0; col < size; col++) matrix[row].push(-1);
+        }
+
+        function drawMarker(centerRow, centerCol, radius) {
+            const half = radius === 3 ? 4 : 2;
+
+            for (let dr = -half; dr <= half; dr++) {
+                for (let dc = -half; dc <= half; dc++) {
+                    const r = centerCol + dc; // row coords
+                    const c = centerRow + dr; // col coords
+
+                    if (r < 0 || c < 0 || r >= size || c >= size) continue;
+
+                    const dist = Math.max(Math.abs(dr), Math.abs(dc));
+
+                    const isDark = (dist === radius) || (dist === 0) || (radius === 3 && dist === 1);
+                    matrix[r][c] = isDark ? 1 : 0;
+                }
+            }
+        }
+
+        drawMarker(3, 3, 3);
+        drawMarker(3, size - 4, 3);
+        drawMarker(size - 4, 3, 3);
+
+        for (i = 8; i < size - 8; i++) { // https://www.thonky.com/qr-code-tutorial/module-placement-matrix#step-4-add-the-timing-patterns
+            matrix[6][i] = (i % 2 === 0) ? 1 : 0;
+            matrix[i][6] = matrix[6][i]
+        }
+
+        const aliCenters = { 2: [6, 18], 3: [6, 22], 4: [6, 26] }[ver] || [];
+        for (let a = 0; a < aliCenters.length; a++) {
+            for (let b = 0; b < aliCenters.length; b++) {
+                const aliRow = aliCenters[a];
+                const aliCol = aliCenters[b];
+
+                if ((aliRow === 6 && aliCol === 6) ||
+                    (aliRow === 6 && aliCol === size - 7) ||
+                    (aliRow === size - 7 && aliCol === 6)) continue;
+
+                drawMarker(aliRow, aliCol, 2);
+ 
+            }
+        }
+
 
 
     }
