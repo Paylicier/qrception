@@ -2,7 +2,7 @@
 
 <body style="background-color: black;">
     <input id="txt" oninput=updateqr(this.value) maxlength="78"><br>
-    <canvas id="qr" style="background-color: white; width: 320px; height: 320px; image-rendering: pixelated;"></canvas>
+    <canvas id="qr" style="background-color: white; width: 320px; height: 320px; image-rendering: pixelated; border-radius: 20px;"></canvas>
 </body>
 <script>
 
@@ -224,7 +224,7 @@
         }
 
 
-
+        
         // drawing the actual qr code
 
         console.log(matrix)
