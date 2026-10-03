@@ -1,10 +1,13 @@
 <title>qr code thing</title>
 <body style="background-color: black;">
-<input id="txt" oninput=updateqr(this.value)>
-  <canvas></canvas>
+<input id="txt" oninput=updateqr(this.value)><br>
+<canvas id="qr" style="background-color: white; width: 200px; height: 200px;"></canvas>
 </body>
 <script>
+    /** @type {CanvasRenderingContext2D} */
+    const qrctx = document.getElementById("qr").getContext("2d");
     function updateqr(t) {
-        alert(t)
+        qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
+        qrctx.fillText(t, 0, 50)
     }
 </script>
