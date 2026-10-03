@@ -1,7 +1,7 @@
 <title>qr code thingy</title>
 
 <body style="background-color: black;">
-    <input id="txt" oninput=updateqr(this.value)><br>
+    <input id="txt" oninput=updateqr(this.value) maxlength="78"><br>
     <canvas id="qr" style="background-color: white; width: 320px; height: 320px; image-rendering: pixelated;"></canvas>
 </body>
 <script>
@@ -44,7 +44,7 @@
         const ver = byteLength < 18 ? 1 : byteLength < 33 ? 2 : byteLength < 54 ? 3 : byteLength < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
         console.log(ver)
 
-        if (ver === 0) { qrctx.textAlign = "center"; return qrctx.fillText("78 bytes max", qrctx.canvas.width / 2, qrctx.canvas.height / 2); }
+        if (ver === 0) { return; }
 
         // codewords
         const data_cw = [0, 19, 34, 55, 80][ver];
@@ -157,9 +157,41 @@
                     (aliRow === size - 7 && aliCol === 6)) continue;
 
                 drawMarker(aliRow, aliCol, 2);
- 
+
             }
         }
+
+
+        // format info
+        // https://www.thonky.com/qr-code-tutorial/format-version-information
+
+        const formatData = 8; // 0b01000 (L + 000 mask, see https://www.thonky.com/qr-code-tutorial/format-version-information#the-error-correction-bits)
+
+        let remainder = formatData;
+
+        for (i = 0; i < 10; i++) {
+            remainder = ((remainder << 1) ^ ((remainder >> 9) * 0x537)) & 32767;
+        }
+
+        const formatBits = ((formatData << 10) | remainder) ^ 0x5412;
+
+        function getFormatBit(k) { return (formatBits >> k) & 1; }
+
+        // write format bits
+        for (i = 0; i < 6; i++) {
+            matrix[i][8] = getFormatBit(i);
+            matrix[8][size - 1 - i] = getFormatBit(i);
+        }
+
+        matrix[7][8] = matrix[8][size - 7] = getFormatBit(6);
+        matrix[8][8] = matrix[8][size - 8] = getFormatBit(7);
+        matrix[8][7] = getFormatBit(8);
+
+        // write them again for redundancy
+        for (i = 8; i < 15; i++) matrix[size - 15 + i][8] = getFormatBit(i);
+        for (i = 9; i < 15; i++) matrix[8][14 - i] = getFormatBit(i);
+
+        matrix[size-8][8] = 1; // https://www.thonky.com/qr-code-tutorial/format-version-information#dark-module
 
 
 
@@ -167,16 +199,18 @@
 
         console.log(matrix)
 
-        console.log(size) 
+        console.log(size)
 
         const quiet = 2; // should be 4 but doesn't look good :)
 
-        qrcan.width = size + quiet*2
+        qrcan.width = size + quiet * 2
         qrcan.height = qrcan.width
 
         qrctx.fillStyle = "black";
         for (let r = 0; r < size; r++) {
             for (let c = 0; c < size; c++) {
+                qrctx.fillStyle = "black";
+                if (matrix[r][c] === -1) qrctx.fillStyle = "red"
                 if (matrix[r][c]) qrctx.fillRect(c + quiet, r + quiet, 1, 1);
             }
         }
