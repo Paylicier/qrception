@@ -2,7 +2,8 @@
 
 <body style="background-color: black;">
     <input id="txt" oninput=updateqr(this.value) maxlength="78"><br>
-    <canvas id="qr" style="background-color: white; width: 320px; height: 320px; image-rendering: pixelated; border-radius: 20px;"></canvas>
+    <canvas id="qr" style="background: white; width: 320px; height: 320px; image-rendering: pixelated; border-radius: 20px;"></canvas>
+    <button onclick=exportqr()>export to image</button>
 </body>
 <script>
 
@@ -44,7 +45,7 @@
         const ver = byteLength < 18 ? 1 : byteLength < 33 ? 2 : byteLength < 54 ? 3 : byteLength < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
         console.log(ver)
 
-        if (ver === 0) return;
+        if (ver === 0 || byteLength === 0) return;
 
         // codewords
         const data_cw = [0, 19, 34, 55, 80][ver];
@@ -124,8 +125,8 @@
 
             for (let dr = -half; dr <= half; dr++) {
                 for (let dc = -half; dc <= half; dc++) {
-                    const r = centerRow + dc; // row coords
-                    const c = centerCol + dr; // col coords
+                    const r = centerRow + dr; // row coords
+                    const c = centerCol + dc; // col coords
 
                     if (r < 0 || c < 0 || r >= size || c >= size) continue;
 
@@ -191,7 +192,7 @@
         for (i = 8; i < 15; i++) matrix[size - 15 + i][8] = getFormatBit(i);
         for (i = 9; i < 15; i++) matrix[8][14 - i] = getFormatBit(i);
 
-        matrix[size-8][8] = 1; // https://www.thonky.com/qr-code-tutorial/format-version-information#dark-module
+        matrix[size - 8][8] = 1; // https://www.thonky.com/qr-code-tutorial/format-version-information#dark-module
 
 
 
@@ -212,7 +213,7 @@
                     const r2 = up ? size - 1 - vertical : vertical;
 
                     if (matrix[r2][c2] >= 0) continue; // cell already occupied (!= -1)
-                    
+
                     let dataBit = (codewords[bitIndex >> 3] >> (7 - (bitIndex & 7))) & 1;
 
                     if (((c2 + r2) & 1) === 0) dataBit ^= 1; //mask
@@ -224,7 +225,7 @@
         }
 
 
-        
+
         // drawing the actual qr code
 
         console.log(matrix)
@@ -232,15 +233,25 @@
         console.log(size)
 
         const quiet = 2; // should be 4 but doesn't look good :)
+        const scale = 16;
 
-        qrcan.width = size + quiet * 2
+        qrcan.width = (size + quiet * 2) * scale
         qrcan.height = qrcan.width
 
+        qrctx.fillStyle = "white";
+        qrctx.fillRect(0, 0, qrcan.width, qrcan.height);
         qrctx.fillStyle = "black";
         for (let r = 0; r < size; r++) {
             for (let c = 0; c < size; c++) {
-                if (matrix[r][c]) qrctx.fillRect(c + quiet, r + quiet, 1, 1);
+                if (matrix[r][c]) qrctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
             }
         }
+    }
+
+    function exportqr() {
+        // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
+        qrcan.toBlob((blob) => {
+            window.open(URL.createObjectURL(blob));
+        });
     }
 </script>
