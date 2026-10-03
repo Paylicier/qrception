@@ -23,13 +23,14 @@
 
     for (i = 255; i < 512; i++) expTable[i] = expTable[i - 255];
 
-    function gM(a, b) { // galois multiply
+    function galoisMultiply(a, b) {
         if (a === 0 || b === 0) return 0;
         return expTable[logTable[a] + logTable[b]];
     }
 
     /** @type {CanvasRenderingContext2D} */
     const qrctx = document.getElementById("qr").getContext("2d");
+
     function updateqr(text) {
 
         // reset
@@ -49,6 +50,61 @@
         const ec_cw = [0, 7, 10, 15, 20][ver];
 
         const size = 17 + 4*ver;
+
+        let bitBuffer = [];
+
+        function pushBits(value, bitCount) {
+            for (let k = bitCount - 1; k >= 0; k--) bitBuffer.push((value >> k) & 1);
+        }
+
+        pushBits(4, 4); // 0100, byte mode -> https://www.thonky.com/qr-code-tutorial/data-encoding#step-3-add-the-mode-indicator
+        pushBits(byteLength, 8) // char count (8 bits for ver 1 -> 9)
+
+        for (i = 0; i < byteLength; i++) pushBits(inputBytes[i], 8) // data
+
+        pushBits(0, Math.min(4, data_cw*8 - bitBuffer.length)) // https://www.thonky.com/qr-code-tutorial/data-encoding#add-a-terminator-of-0s-if-necessary
+
+        while (bitBuffer.length % 8 !== 0) bitBuffer.push(0); // https://www.thonky.com/qr-code-tutorial/data-encoding#add-more-0s-to-make-the-length-a-multiple-of-8
+
+        console.log(bitBuffer)
+
+        let dataCodewords = [];
+
+        for (i = 0; i < bitBuffer.length; i += 8) {
+            let byteValue = 0;
+            for (let j = 0; j < 8; j++) byteValue = byteValue*2 + bitBuffer[i+j];
+            dataCodewords.push(byteValue)
+        }
+
+        for (i=0; dataCodewords.length < data_cw; i++) {
+            dataCodewords.push(i%2 === 0 ? 0xEC : 0x11); 
+        }
+
+        // reed-solomon
+        // https://www.thonky.com/qr-code-tutorial/error-correction-coding
+
+        let generatorPoly = [1]; // (b²-4ac eheh)
+
+        for (i = 0; i < ec_cw; i++) {
+            let nextPoly = new Array(generatorPoly.length + 1).fill(0);
+            for (j=0; j<generatorPoly.length; j++) {
+                nextPoly[j] ^= galoisMultiply(generatorPoly[j], expTable[i]);
+                nextPoly[j + 1] ^= generatorPoly[j];
+            }
+            generatorPoly = nextPoly;
+        }
+
+        let ecCodewords = new Array(ec_cw).fill(0);
+        for (i = 0; i < dataCodewords.length; i++) {
+            const factor = dataCodewords[i] ^ ecCodewords.shift();
+            ecCodewords.push(0);
+            for (j = 0; j < ecCodewords; j++) {
+                ecCodewords[j] ^= galoisMultiply(generatorPoly[ec_cw - 1 - j], factor)
+            }
+        }
+
+        const codewords = dataCodewords.concat(ecCodewords);
+
 
     }
 </script>
