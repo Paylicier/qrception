@@ -2,7 +2,7 @@
 
 <body style="background-color: black;">
     <input id="txt" oninput=updateqr(this.value)><br>
-    <canvas id="qr" style="background-color: white; width: 200px; height: 200px;"></canvas>
+    <canvas id="qr" style="background-color: white; width: 320px; height: 320px; image-rendering: pixelated;"></canvas>
 </body>
 <script>
 
@@ -28,8 +28,9 @@
         return expTable[logTable[a] + logTable[b]];
     }
 
+    const qrcan = document.getElementById("qr");
     /** @type {CanvasRenderingContext2D} */
-    const qrctx = document.getElementById("qr").getContext("2d");
+    const qrctx = qrcan.getContext("2d");
 
     function updateqr(text) {
 
@@ -162,5 +163,22 @@
 
 
 
+        // drawing the actual qr code
+
+        console.log(matrix)
+
+        console.log(size) 
+
+        const quiet = 2; // should be 4 but doesn't look good :)
+
+        qrcan.width = size + quiet*2
+        qrcan.height = qrcan.width
+
+        qrctx.fillStyle = "black";
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                if (matrix[r][c]) qrctx.fillRect(c + quiet, r + quiet, 1, 1);
+            }
+        }
     }
 </script>
