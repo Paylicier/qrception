@@ -1,49 +1,93 @@
-<title>qr code thingy</title>
+<input oninput=u(value) maxlength=78 placeholder=whatever...><br>
+<canvas id=qr></canvas>
+<br>
+<button onclick=x()>export to png</button>
+<p>open sourced on <a href=http://github.com/Paylicier/qrception>github</a></p>
+<style>
+    body {
+        background: #111;
+        color: #555;
+        font: 15px system-ui;
+        text-align: center;
+        margin: 3em 1em
+    }
 
-<body style="background-color: black;">
-    <input id="txt" oninput=updateqr(this.value) maxlength="78"><br>
-    <canvas id="qr" style="background: white; width: 320px; height: 320px; image-rendering: pixelated; border-radius: 20px;"></canvas>
-    <button onclick=exportqr()>export to image</button>
-</body>
+    input {
+        width: 100%;
+        max-width: 24em;
+        background: #222;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: .7em;
+        font: inherit
+    }
+
+    canvas {
+        width: 320px;
+        height: 320px;
+        border-radius: 20px;
+        background: #eee;
+        margin: 1em 0;
+        image-rendering: pixelated;
+    }
+
+    button {
+        background: #333;
+        color: #eee;
+        border: 1px solid #555;
+        border-radius: 10px;
+        padding: .6em 1.2em;
+        font: inherit;
+        cursor: pointer
+    }
+
+    a {
+        text-decoration: none;
+        color: #555;
+    }
+
+    a:hover {
+        color: #888;
+    }
+</style>
 <script>
 
     // galois field
 
-    let expTable = new Array(512);
-    let logTable = new Array(256);
+    let eT = []; // expTable
+    let lT = []; // logTable
 
-    let value = 1;
+    let v = 1;
 
     for (let i = 0; i < 255; i++) {
-        expTable[i] = value;
-        logTable[value] = i;
+        eT[i] = v;
+        lT[v] = i;
 
-        value <<= 1;
-        if (value & 256) value ^= 0x11D;
+        v <<= 1;
+        if (v & 256) v ^= 0x11D;
     }
 
-    for (i = 255; i < 512; i++) expTable[i] = expTable[i - 255];
+    for (i = 255; i < 512; i++) eT[i] = eT[i - 255];
 
-    function galoisMultiply(a, b) {
+    function gM(a, b) { // galois multiply
         if (a === 0 || b === 0) return 0;
-        return expTable[logTable[a] + logTable[b]];
+        return eT[lT[a] + lT[b]];
     }
 
-    const qrcan = document.getElementById("qr");
     /** @type {CanvasRenderingContext2D} */
-    const qrctx = qrcan.getContext("2d");
+    const qCt = qr.getContext("2d"); // qr canvas ctx
 
-    function updateqr(text) {
+    function u(text) {
 
         // reset
-        qrctx.clearRect(0, 0, qrctx.canvas.width, qrctx.canvas.height)
+        qCt.clearRect(0, 0, qCt.canvas.width, qCt.canvas.height)
 
         // version
         const inputBytes = new TextEncoder().encode(text);
         const byteLength = inputBytes.length;
 
         const ver = byteLength < 18 ? 1 : byteLength < 33 ? 2 : byteLength < 54 ? 3 : byteLength < 79 ? 4 : 0;  // V1=17B, V2=32B, V3=53B, V4=78B
-        console.log(ver)
 
         if (ver === 0 || byteLength === 0) return;
 
@@ -68,8 +112,6 @@
 
         while (bitBuffer.length % 8 !== 0) bitBuffer.push(0); // https://www.thonky.com/qr-code-tutorial/data-encoding#add-more-0s-to-make-the-length-a-multiple-of-8
 
-        console.log(bitBuffer)
-
         let dataCodewords = [];
 
         for (i = 0; i < bitBuffer.length; i += 8) {
@@ -90,7 +132,7 @@
         for (i = 0; i < ec_cw; i++) {
             let nextPoly = new Array(generatorPoly.length + 1).fill(0);
             for (j = 0; j < generatorPoly.length; j++) {
-                nextPoly[j] ^= galoisMultiply(generatorPoly[j], expTable[i]);
+                nextPoly[j] ^= gM(generatorPoly[j], eT[i]);
                 nextPoly[j + 1] ^= generatorPoly[j];
             }
             generatorPoly = nextPoly;
@@ -101,14 +143,11 @@
             const factor = dataCodewords[i] ^ ecCodewords.shift();
             ecCodewords.push(0);
             for (j = 0; j < ec_cw; j++) {
-                ecCodewords[j] ^= galoisMultiply(generatorPoly[ec_cw - 1 - j], factor)
+                ecCodewords[j] ^= gM(generatorPoly[ec_cw - 1 - j], factor)
             }
         }
 
         const codewords = dataCodewords.concat(ecCodewords);
-
-        console.log("cw", codewords)
-
 
         // static marker things or whatever they're called
         // https://www.thonky.com/qr-code-tutorial/module-placement-matrix
@@ -228,29 +267,25 @@
 
         // drawing the actual qr code
 
-        console.log(matrix)
-
-        console.log(size)
-
         const quiet = 2; // should be 4 but doesn't look good :)
         const scale = 16;
 
-        qrcan.width = (size + quiet * 2) * scale
-        qrcan.height = qrcan.width
+        qr.width = (size + quiet * 2) * scale
+        qr.height = qr.width
 
-        qrctx.fillStyle = "white";
-        qrctx.fillRect(0, 0, qrcan.width, qrcan.height);
-        qrctx.fillStyle = "black";
+        qCt.fillStyle = "#eee";
+        qCt.fillRect(0, 0, qr.width, qr.height);
+        qCt.fillStyle = "#111";
         for (let r = 0; r < size; r++) {
             for (let c = 0; c < size; c++) {
-                if (matrix[r][c]) qrctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+                if (matrix[r][c]) qCt.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
             }
         }
     }
 
-    function exportqr() {
+    function x() {
         // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
-        qrcan.toBlob((blob) => {
+        qr.toBlob((blob) => {
             window.open(URL.createObjectURL(blob));
         });
     }
