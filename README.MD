@@ -12,7 +12,7 @@
 
 ## Demo
 
-copy the content of [this](https://github.com/Paylicier/qrception/dist/uri.txt) file into your url bar
+copy the content of [this](https://github.com/Paylicier/qrception/blob/main/dist/uri.txt) file into your url bar
 
 ### Build
 
